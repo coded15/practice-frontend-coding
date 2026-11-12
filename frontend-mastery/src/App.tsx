@@ -26,8 +26,15 @@ export default function App() {
       <ul>
         {tasks.map((task) => (
           <li>
-            {task.title}
-
+            {/* {task.title} */}
+            <label>
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => toggleTask(task.id)}
+              />
+              {task.title}
+            </label>
             <button type="button" onClick={() => handleDelete(task.id)}>
               Delete
             </button>
@@ -36,6 +43,13 @@ export default function App() {
       </ul>
     </main>
   );
+  function toggleTask(id: string) {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task,
+      ),
+    );
+  }
   function handleDelete(idToDelete: string) {
     setTasks(tasks.filter((task) => task.id !== idToDelete));
   }
