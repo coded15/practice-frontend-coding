@@ -25,11 +25,20 @@ export default function App() {
       <button onClick={addTask}>Add</button>
       <ul>
         {tasks.map((task) => (
-          <li>{task.title}</li>
+          <li>
+            {task.title}
+
+            <button type="button" onClick={() => handleDelete(task.id)}>
+              Delete
+            </button>
+          </li>
         ))}
       </ul>
     </main>
   );
+  function handleDelete(idToDelete: string) {
+    setTasks(tasks.filter((task) => task.id !== idToDelete));
+  }
   function addTask() {
     const trimmedTitle = title.trim();
     if (trimmedTitle === "") {
@@ -46,3 +55,40 @@ export default function App() {
     setTitle("");
   }
 }
+
+// import { useState } from "react";
+
+// type Task = {
+//   id: string;
+//   input: string;
+//   completed: boolean;
+// }
+
+// export default function App() => {
+//   [tasks, setTask] = useState<Task[]>([]);
+//   [title, setTitle] = useState("");
+//   return(
+//     <main>
+//     <p>input task</p>
+//     <input id= "input-bar" value= {title} onChange={(event)=>setTitle(event.target.value)}/>
+//     <button onClick={addTask}>Add task</button>
+//     <ul>
+//     tasks.map((task) => (<li>task.input</li>))
+//     </ul>
+//     </main>
+
+//   )
+//   function addTask(): Task[] => {
+//     const trimmedTitle = title.trim();
+//     if(trimmedTitle === "")
+//     const newTask : Task = {
+//       id: crypto.randomUUID(),
+//       input: trimmedTitle,
+//       completed: false,
+//     }
+//     return(
+//       setTask((prevTasks) => [...prevTasks, newTask]);
+//       setTitle("");
+//     )
+//   }
+// }
