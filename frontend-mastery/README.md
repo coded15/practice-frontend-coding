@@ -562,7 +562,89 @@ Calling `counter` does not rerun `createCounter`, so it does not reset count.
 The returned function retains access to the same count binding.
 Calling `createCounter()` again creates an independent counter with a separate binding.
 This is ordinary JavaScript, not React state; changing this count does not itself trigger React rendering.
-Debounce uses this mechanism to retain a timer identifier between calls. Implementation practice is still pending.
+Debounce uses this mechanism to retain a timer identifier between calls.
+
+### Trailing debounce: explained; reproduction practice pending
+
+Debounce calls the callback only after calls have stopped for the specified delay.
+
+```js
+function debounce(callback, delay) {
+  let timerId;
+
+  return function (...args) {
+    clearTimeout(timerId);
+
+    timerId = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  };
+}
+```
+
+- The closure preserves one timer ID for this wrapper.
+- `...args` in the parameter list collects arguments into an array (rest).
+- `callback(...args)` expands them into separate arguments (spread).
+- Each call cancels the previous pending timer and schedules a new one using the latest arguments.
+- The timer callback's braces need no return because it performs an action.
+- Calls at 0, 100, and 200 ms with a 300 ms delay produce only the last callback, approximately at 500 ms or later.
+- Create the debounced wrapper once and reuse it. Recreating it for each event creates separate timers that cannot cancel each other.
+- This is a basic trailing-only version: no leading call, `cancel`/`flush` API, return-value forwarding, or preservation of a caller's dynamic `this`.
+- A React render recreates ordinary local variables. Do not construct this wrapper inline per input event; React integration needs a stable wrapper with timer cleanup, or a debounce effect.
+- An alternative in React is an effect that schedules `setTimeout` on query changes and returns `clearTimeout` cleanup.
+
+#### Who supplies callback and args?
+
+```js
+function searchUsers(query) {
+  console.log("Searching:", query);
+}
+
+const debouncedSearch = debounce(searchUsers, 300);
+debouncedSearch("react");
+```
+
+- The caller of `debounce` supplies `searchUsers` as `callback` and `300` as `delay`.
+- A callback is simply a function passed to other code for that code to invoke.
+- `debounce` returns a new wrapper function, stored in `debouncedSearch`.
+- The caller of that wrapper supplies `"react"`, collected as `args = ["react"]`.
+- The timer eventually calls `callback(...args)`, equivalent here to `searchUsers("react")`.
+- `clearTimeout(timerId)` cancels a scheduled timer; it does not delete the variable, reset its value, or destroy the closure.
+- The closure preserves access to bindings, not immutable copies of their values. Reassigning `timerId` replaces the stored timer identifier while retaining the same shared binding.
+
+### Leading throttle: explained; reproduction practice pending
+
+Throttle limits execution frequency during continuous calls. This version runs the first call immediately, ignores calls during the cooldown, and becomes ready after the timer fires.
+
+```js
+function throttle(callback, delay) {
+  let ready = true;
+
+  return function (...args) {
+    if (!ready) {
+      return;
+    }
+
+    ready = false;
+
+    setTimeout(() => {
+      ready = true;
+    }, delay);
+
+    callback(...args);
+  };
+}
+```
+
+- The closure preserves the shared `ready` binding between calls.
+- An early `return` skips calls during the cooldown.
+- Set up the reset timer before invoking the callback so a synchronous callback error does not leave the wrapper permanently locked.
+- The timer only unlocks the wrapper; it does not invoke a skipped call.
+- This is leading-only: no trailing invocation, dynamic `this` preservation, or cancellation API.
+- With a 300 ms delay, synchronous calls with `"a"`, `"ab"`, and `"abc"` invoke only `"a"`.
+- Debounce waits for quiet and uses the latest arguments; leading throttle runs immediately and drops calls during the cooldown.
+- For continuous scroll/resize updates, throttle can keep processing periodically; debounce waits until calls pause.
+- These utility exercises are vanilla JavaScript. Pasting untyped parameters into the TypeScript component may cause lint/type errors; keep console practice separate until adding proper types and integration.
 
 ## 10. Interview checklist and manual checks
 

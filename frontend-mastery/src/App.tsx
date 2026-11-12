@@ -203,4 +203,29 @@ export default function App() {
     setTasks((tasks) => [...tasks, newTask]);
     setTitle("");
   }
+
+  function debounce(callback, delay) {
+    let timerId;
+    return function (...args) {
+      clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    };
+  }
+
+  function throttle(callback, delay) {
+    let ready = true;
+
+    return function (...args) {
+      if (!ready) {
+        return;
+      }
+      ready = false;
+      setTimeout(() => {
+        ready = true;
+      }, delay);
+      callback(...args);
+    };
+  }
 }
