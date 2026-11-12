@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Task = {
   id: string;
@@ -37,13 +37,51 @@ export default function App() {
   const startIndex = (currentPage - 1) * pageSize;
 
   const paginatedTasks = visibleTasks.slice(startIndex, startIndex + pageSize);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadUsers() {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await fetch(
+          "https://jsonplaceholder.typicode.com/users",
+          { signal: controller.signal },
+        );
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
+        const data: User[] = await response.json();
+        if (!controller.signal.aborted) {
+          setUsers(data);
+        }
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError("Unable to load users.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+    loadUsers();
+    return () => {
+      controller.abort();
+    };
+  }, []);
   return (
     <main>
       <section>
         <h2>Users</h2>
-        <button type="button" disabled={loading} onClick={loadUsers}>
-          Load Users
-        </button>
+        {/* <button type="button" disabled={loading} onClick={loadUsers}> */}
+        {/* Load Users
+        </button> */}
         {loading && <p>Loading Users</p>}
         {error && <p role="alert">{error}</p>}
         <ul>
@@ -132,28 +170,7 @@ export default function App() {
       ),
     );
   }
-  async function loadUsers() {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch(
-        "https://jsonplaceholder.typicode.com/users",
-      );
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-      const data: User[] = await response.json();
-      setUsers(data);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Unable to load users.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
+
   function handleDelete(idToDelete: string) {
     setTasks(tasks.filter((task) => task.id !== idToDelete));
   }

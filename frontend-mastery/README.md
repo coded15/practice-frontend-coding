@@ -43,9 +43,10 @@ npm run lint
 
 These are implementation milestones, not a claim that every behavior has been browser-tested.
 
-### Explained; implementation still pending
+### In progress
 
-- Automatic fetching with `useEffect`, request cleanup, and development Strict Mode.
+- Automatic fetching with `useEffect`: first attempt added; hook placement, the old button reference, and cancellation wiring still need correction. Build and lint currently fail on the first two issues.
+- Request cleanup and development Strict Mode have been explained.
 
 ### Still to practice
 
@@ -473,7 +474,7 @@ JavaScript can throw any value, including strings.
 `error instanceof Error` narrows the caught value to an Error object before accessing `.message`.
 Use an explicit fallback message for other thrown values.
 
-## 9. useEffect: explained, not yet integrated
+## 9. useEffect: integration in progress
 
 **Definition:** a Hook for synchronizing a component with an external system, such as a network request, timer, or subscription.
 Setup runs after the UI commit, not during rendering.
@@ -499,6 +500,13 @@ For the next exercise:
 - Ignore intentional cancellation, and prevent an obsolete request from updating users, error, or loading.
 
 Do not make the effect callback itself `async`: React expects it to return a cleanup function or nothing, not a promise.
+
+### Mistakes caught in the first effect attempt
+
+- An effect after the component's `return` is unreachable. Put all hooks before the component returns JSX. A function declaration can be referenced before its textual declaration, but a `useEffect(...)` call after `return` never executes.
+- A function declared inside the effect is scoped to the effect. JSX outside it cannot reference `loadUsers`; remove the old Load Users button for automatic loading.
+- Creating and aborting an `AbortController` is not enough: connect it with `fetch(url, { signal: controller.signal })`.
+- Guard user/error/loading updates against cancellation. An intentionally aborted request is not a user-facing error, and its `finally` must not clear a newer request's loading indicator.
 
 ## 10. Interview checklist and manual checks
 
