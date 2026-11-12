@@ -30,18 +30,26 @@ export default function App() {
   const paginatedTasks = visibleTasks.slice(startIndex, startIndex + pageSize);
   return (
     <main>
-      <h1>Task List</h1>
-      <label htmlFor="task-title">Task Name</label>
-      <input
-        id="task-title"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <p>You typed: {title}</p>
-      <button type="button" onClick={() => setTitle("")}>
-        Clear
-      </button>
-      <button onClick={addTask}>Add</button>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          addTask();
+        }}
+      >
+        <h1>Task List</h1>
+        <label htmlFor="task-title">Task Name</label>
+        <input
+          id="task-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+        <p>You typed: {title}</p>
+        <button type="button" onClick={() => setTitle("")}>
+          Clear
+        </button>
+        <button onClick={addTask}>Add</button>
+      </form>
+
       <label htmlFor="task-filter">Show</label>
       <select
         id="task-filter"
