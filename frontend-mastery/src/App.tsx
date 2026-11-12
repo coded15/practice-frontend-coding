@@ -6,6 +6,12 @@ type Task = {
   completed: boolean;
 };
 
+type User = {
+  name: string;
+  id: number;
+  email: string;
+};
+
 type Filter = "all" | "completed" | "active";
 
 export default function App() {
@@ -13,6 +19,9 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const pageSize = 3;
   const visibleTasks = tasks.filter((task) => {
     if (filter === "completed") {
@@ -30,6 +39,21 @@ export default function App() {
   const paginatedTasks = visibleTasks.slice(startIndex, startIndex + pageSize);
   return (
     <main>
+      <section>
+        <h2>Users</h2>
+        <button type="button" disabled={loading} onClick={loadUsers}>
+          Load Users
+        </button>
+        {loading && <p>Loading Users</p>}
+        {error && <p role="alert">{error}</p>}
+        <ul>
+          {users.map((user) => (
+            <li key={user.id}>
+              {user.name} - {user.email}
+            </li>
+          ))}
+        </ul>
+      </section>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -47,7 +71,7 @@ export default function App() {
         <button type="button" onClick={() => setTitle("")}>
           Clear
         </button>
-        <button onClick={addTask}>Add</button>
+        <button type="submit">Add</button>
       </form>
 
       <label htmlFor="task-filter">Show</label>
@@ -107,6 +131,28 @@ export default function App() {
         task.id === id ? { ...task, completed: !task.completed } : task,
       ),
     );
+  }
+  async function loadUsers() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        "https://jsonplaceholder.typicode.com/users",
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+      const data: User[] = await response.json();
+      setUsers(data);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Unable to load users.");
+      }
+    } finally {
+      setLoading(false);
+    }
   }
   function handleDelete(idToDelete: string) {
     setTasks(tasks.filter((task) => task.id !== idToDelete));
