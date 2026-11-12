@@ -12,6 +12,8 @@ export default function App() {
   const [title, setTitle] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 3;
   const visibleTasks = tasks.filter((task) => {
     if (filter === "completed") {
       return task.completed;
@@ -21,6 +23,11 @@ export default function App() {
     }
     return true;
   });
+  const totalPages = Math.max(1, Math.ceil(visibleTasks.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+
+  const paginatedTasks = visibleTasks.slice(startIndex, startIndex + pageSize);
   return (
     <main>
       <h1>Task List</h1>
@@ -36,18 +43,23 @@ export default function App() {
       </button>
       <button onClick={addTask}>Add</button>
       <label htmlFor="task-filter">Show</label>
-      <select id = "task-filter" value={filter} onChange={(event) => {const value = event.currentTarget.value
-        if(value === "all" || value == "completed" || value == "active")
-        {
-          setFilter(value)
-        }
-      }}>
+      <select
+        id="task-filter"
+        value={filter}
+        onChange={(event) => {
+          const value = event.currentTarget.value;
+          if (value === "all" || value == "completed" || value == "active") {
+            setFilter(value);
+            setPage(1);
+          }
+        }}
+      >
         <option value="all">All</option>
         <option value="completed">Completed</option>
         <option value="active">Active</option>
       </select>
       <ul>
-        {visibleTasks.map((task) => (
+        {paginatedTasks.map((task) => (
           <li key={task.id}>
             {/* {task.title} */}
             <label>
@@ -64,6 +76,21 @@ export default function App() {
           </li>
         ))}
       </ul>
+      <button
+        type="button"
+        disabled={currentPage === totalPages}
+        onClick={() => setPage(currentPage + 1)}
+      >
+        Next
+      </button>
+      <button
+        type="button"
+        disabled={currentPage === 1}
+        onClick={() => setPage(currentPage - 1)}
+      >
+        Previous
+      </button>
+      {visibleTasks.length === 0 && <p>No matching tasks.</p>}
     </main>
   );
   function toggleTask(id: string) {
