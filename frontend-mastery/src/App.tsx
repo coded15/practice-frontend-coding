@@ -22,6 +22,7 @@ export default function App() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
   const pageSize = 3;
   const visibleTasks = tasks.filter((task) => {
     if (filter === "completed") {
@@ -75,6 +76,9 @@ export default function App() {
       controller.abort();
     };
   }, []);
+  const matchingUsers = users.filter((user) => {
+    return user.name.toLowerCase().includes(search.trim().toLowerCase());
+  });
   return (
     <main>
       <section>
@@ -82,10 +86,20 @@ export default function App() {
         {/* <button type="button" disabled={loading} onClick={loadUsers}> */}
         {/* Load Users
         </button> */}
+        <label htmlFor="user-search">Search Users</label>
+        <input
+          id="user-search"
+          value={search}
+          type="search"
+          onChange={(event) => setSearch(event.currentTarget.value)}
+        />
         {loading && <p>Loading Users</p>}
         {error && <p role="alert">{error}</p>}
+        {matchingUsers.length === 0 && !loading && !error && (
+          <p>No matching users found</p>
+        )}
         <ul>
-          {users.map((user) => (
+          {matchingUsers.map((user) => (
             <li key={user.id}>
               {user.name} - {user.email}
             </li>
@@ -190,40 +204,3 @@ export default function App() {
     setTitle("");
   }
 }
-
-// import { useState } from "react";
-
-// type Task = {
-//   id: string;
-//   input: string;
-//   completed: boolean;
-// }
-
-// export default function App() => {
-//   [tasks, setTask] = useState<Task[]>([]);
-//   [title, setTitle] = useState("");
-//   return(
-//     <main>
-//     <p>input task</p>
-//     <input id= "input-bar" value= {title} onChange={(event)=>setTitle(event.target.value)}/>
-//     <button onClick={addTask}>Add task</button>
-//     <ul>
-//     tasks.map((task) => (<li>task.input</li>))
-//     </ul>
-//     </main>
-
-//   )
-//   function addTask(): Task[] => {
-//     const trimmedTitle = title.trim();
-//     if(trimmedTitle === "")
-//     const newTask : Task = {
-//       id: crypto.randomUUID(),
-//       input: trimmedTitle,
-//       completed: false,
-//     }
-//     return(
-//       setTask((prevTasks) => [...prevTasks, newTask]);
-//       setTitle("");
-//     )
-//   }
-// }

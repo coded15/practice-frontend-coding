@@ -39,14 +39,15 @@ npm run lint
 - Toggle completion without mutating state.
 - All / Active / Completed filtering.
 - Client-side pagination with Previous / Next and an empty message.
-- Button-triggered user fetching with loading and error UI.
+- Automatic user fetching with loading/error UI, abort cleanup, and guards against updates from cancelled requests.
+- Case-insensitive local user search and a no-matches message.
 
 These are implementation milestones, not a claim that every behavior has been browser-tested.
+The corrected automatic-fetch implementation passes build and lint.
 
-### In progress
+### Explained
 
-- Automatic fetching with `useEffect`: first attempt added; hook placement, the old button reference, and cancellation wiring still need correction. Build and lint currently fail on the first two issues.
-- Request cleanup and development Strict Mode have been explained.
+- Request cleanup and development Strict Mode.
 
 ### Still to practice
 
@@ -465,8 +466,8 @@ Handle rejections; do not leave promises unattended.
 5. In `finally`, reset loading after success or failure.
 
 Loading and error are state because changing them should update the UI.
-Disable the request button while loading to prevent repeated clicks from starting overlapping requests.
-The current list remains visible during a reload; loading/error UI can appear alongside previously fetched users.
+In the earlier button-triggered version, disabling the request button while loading prevented repeated clicks from starting overlapping requests.
+The current version fetches automatically on mount and has no active Load Users button or retry action.
 
 ### Why check instanceof Error?
 
@@ -474,7 +475,7 @@ JavaScript can throw any value, including strings.
 `error instanceof Error` narrows the caught value to an Error object before accessing `.message`.
 Use an explicit fallback message for other thrown values.
 
-## 9. useEffect: integration in progress
+## 9. useEffect: implemented
 
 **Definition:** a Hook for synchronizing a component with an external system, such as a network request, timer, or subscription.
 Setup runs after the UI commit, not during rendering.
@@ -489,7 +490,7 @@ Include all reactive values read by the effect; do not omit dependencies just to
 A cleanup runs before setup reruns with changed dependencies and when the component unmounts.
 Development Strict Mode may perform an extra setup -> cleanup -> setup cycle to test cleanup.
 
-For the next exercise:
+Implemented pattern:
 
 - Import `useEffect`.
 - Move fetching into a function defined inside the effect.
@@ -501,12 +502,67 @@ For the next exercise:
 
 Do not make the effect callback itself `async`: React expects it to return a cleanup function or nothing, not a promise.
 
-### Mistakes caught in the first effect attempt
+### What is the controller?
+
+`controller` is our variable name for an `AbortController` instance, a standard JavaScript cancellation API, not a React feature.
+
+```tsx
+const controller = new AbortController();
+const response = await fetch(url, { signal: controller.signal });
+```
+
+- `controller.signal` is the cancellation signal passed to the operation.
+- `controller.abort()` requests cancellation of operations using that signal.
+- `controller.signal.aborted` tells us whether cancellation has been requested.
+- Creating a controller without passing its signal to fetch does not connect it to the request.
+- Aborting an in-flight fetch normally rejects its promise with an `AbortError`; our catch treats intentional cancellation differently from real failures.
+- Aborting cannot undo completed work or guarantee that the server stops processing a request.
+- A signal stays aborted; create a new controller for each effect setup.
+- Effect cleanup cancels the obsolete request, while guards prevent obsolete results from updating state.
+
+### Mistakes caught and corrected in the first effect attempt
 
 - An effect after the component's `return` is unreachable. Put all hooks before the component returns JSX. A function declaration can be referenced before its textual declaration, but a `useEffect(...)` call after `return` never executes.
 - A function declared inside the effect is scoped to the effect. JSX outside it cannot reference `loadUsers`; remove the old Load Users button for automatic loading.
 - Creating and aborting an `AbortController` is not enough: connect it with `fetch(url, { signal: controller.signal })`.
 - Guard user/error/loading updates against cancellation. An intentionally aborted request is not a user-facing error, and its `finally` must not clear a newer request's loading indicator.
+
+### Client-side user search: implemented
+
+Keep the query in state and derive the matching users during rendering.
+Normalize the query and names with `toLowerCase()` for case-insensitive comparison; use `includes()` to match substrings.
+An empty query should show all users. Search locally over fetched data rather than refetching on every keystroke.
+When combining search with pagination, search first, paginate second, and reset the relevant page on query changes.
+Client-side filtering does not need an effect or debounce just to work.
+
+The first search implementation returned `user.name` on a match and `undefined` otherwise.
+This passes build/lint and works for nonempty names because filter tests truthiness, but returning the boolean from `includes()` directly is clearer and also handles empty names correctly.
+`filter` keeps the original object; it does not replace the object with the returned name.
+
+## Closures: introduction for debounce and throttle
+
+A closure lets a function access bindings from the lexical scope in which it was created, even after the outer function returns.
+
+```js
+function createCounter() {
+  let count = 0;
+
+  return function increment() {
+    count = count + 1;
+    return count;
+  };
+}
+
+const counter = createCounter();
+counter(); // 1
+counter(); // 2
+```
+
+Calling `counter` does not rerun `createCounter`, so it does not reset count.
+The returned function retains access to the same count binding.
+Calling `createCounter()` again creates an independent counter with a separate binding.
+This is ordinary JavaScript, not React state; changing this count does not itself trigger React rendering.
+Debounce uses this mechanism to retain a timer identifier between calls. Implementation practice is still pending.
 
 ## 10. Interview checklist and manual checks
 
