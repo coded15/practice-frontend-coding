@@ -6,9 +6,21 @@ type Task = {
   completed: boolean;
 };
 
+type Filter = "all" | "completed" | "active";
+
 export default function App() {
   const [title, setTitle] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [filter, setFilter] = useState<Filter>("all");
+  const visibleTasks = tasks.filter((task) => {
+    if (filter === "completed") {
+      return task.completed;
+    }
+    if (filter === "active") {
+      return !task.completed;
+    }
+    return true;
+  });
   return (
     <main>
       <h1>Task List</h1>
@@ -23,9 +35,20 @@ export default function App() {
         Clear
       </button>
       <button onClick={addTask}>Add</button>
+      <label htmlFor="task-filter">Show</label>
+      <select id = "task-filter" value={filter} onChange={(event) => {const value = event.currentTarget.value
+        if(value === "all" || value == "completed" || value == "active")
+        {
+          setFilter(value)
+        }
+      }}>
+        <option value="all">All</option>
+        <option value="completed">Completed</option>
+        <option value="active">Active</option>
+      </select>
       <ul>
-        {tasks.map((task) => (
-          <li>
+        {visibleTasks.map((task) => (
+          <li key={task.id}>
             {/* {task.title} */}
             <label>
               <input
